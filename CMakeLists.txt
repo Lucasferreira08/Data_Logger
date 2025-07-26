@@ -34,6 +34,9 @@ project(Data_Logger C CXX ASM)
 pico_sdk_init()
 
 add_subdirectory(libs/FatFs_SPI)
+add_subdirectory(libs/Mpu6050)
+add_subdirectory(libs/Bitdoglab_pico)
+add_subdirectory(libs/Ssd1306)
 
 # Add executable. Default name is the project name, version 0.1
 
@@ -53,11 +56,18 @@ target_link_libraries(Data_Logger
 # Add the standard include files to the build
 target_include_directories(Data_Logger PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/libs/Bitdoglab_pico
+        ${CMAKE_CURRENT_LIST_DIR}/libs/FatFs_SPI
+        ${CMAKE_CURRENT_LIST_DIR}/libs/Mpu6050
+        ${CMAKE_CURRENT_LIST_DIR}/libs/Ssd1306
 )
 
 # Add any user requested libraries
 target_link_libraries(Data_Logger 
         FatFs_SPI
+        Mpu6050
+        Bitdoglab_pico
+        Ssd1306
         )
 
 pico_add_extra_outputs(Data_Logger)
