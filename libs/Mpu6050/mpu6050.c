@@ -14,36 +14,27 @@ void mpu6050_init(i2c_inst_t *i2c, uint sda_pin, uint scl_pin) {
     
     // Inicializa o I2C com uma frequência de 400kHz
     i2c_init(i2c_instance, 400 * 1000);
-
-    printf("1\n");
     
     // Configura os pinos SDA e SCL para a função I2C
     gpio_set_function(sda_pin, GPIO_FUNC_I2C);
     gpio_set_function(scl_pin, GPIO_FUNC_I2C);
 
-    printf("2\n");
-    
     // Habilita os resistores de pull-up internos
     gpio_pull_up(sda_pin);
     gpio_pull_up(scl_pin);
-
-    printf("3\n");
 }
 
 // Função para resetar o sensor e acordá-lo
 void mpu6050_reset() {
     // Duas escritas de bytes: registrador 0x6B (PWR_MGMT_1), valor 0x80 (reset)
     uint8_t buf[] = {0x6B, 0x80};
-    printf("1\n");
     i2c_write_blocking(i2c_instance, device_address, buf, 2, false);
-    printf("2\n");
     sleep_ms(100); // Aguarda o reset
 
 
     // Tira o dispositivo do modo de suspensão
     buf[1] = 0x00;
     i2c_write_blocking(i2c_instance, device_address, buf, 2, false);
-    printf("3\n");
     sleep_ms(10);
 }
 

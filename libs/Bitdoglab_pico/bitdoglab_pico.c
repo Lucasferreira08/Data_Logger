@@ -28,17 +28,16 @@ void bitdog_init(gpio_irq_callback_t callback) {
 }
 
 void bitdog_led_set(led_color_t color) {
-    // Lógica invertida para anodo comum (1 = desligado, 0 = ligado)
-    bool r = true, g = true, b = true;
+    bool r = false, g = false, b = false;
 
     switch (color) {
-        case LED_COLOR_RED:    r = false; break;
-        case LED_COLOR_GREEN:  g = false; break;
-        case LED_COLOR_BLUE:   b = false; break;
-        case LED_COLOR_YELLOW: r = false; g = false; break;
-        case LED_COLOR_PURPLE: r = false; b = false; break;
-        case LED_COLOR_CYAN:   g = false; b = false; break;
-        case LED_COLOR_WHITE:  r = false; g = false; b = false; break;
+        case LED_COLOR_RED:    r = true; break;
+        case LED_COLOR_GREEN:  g = true; break;
+        case LED_COLOR_BLUE:   b = true; break;
+        case LED_COLOR_YELLOW: r = true; g = true; break;
+        case LED_COLOR_PURPLE: r = true; b = true; break;
+        case LED_COLOR_CYAN:   g = true; b = true; break;
+        case LED_COLOR_WHITE:  r = true; g = true; b = true; break;
         case LED_COLOR_OFF:
         default:
             break;
