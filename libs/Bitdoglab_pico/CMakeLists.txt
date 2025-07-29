@@ -7,4 +7,6 @@ target_include_directories(Bitdoglab_pico INTERFACE
 target_link_libraries(Bitdoglab_pico INTERFACE
         pico_stdlib
         hardware_i2c
+        hardware_pwm
+        hardware_clocks
 )

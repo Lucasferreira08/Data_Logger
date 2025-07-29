@@ -34,7 +34,8 @@ def plot_imu_data(filepath):
     plt.plot(data['numero_amostra'], data['accel_z'], label='Accel Z')
     plt.title('Dados do Acelerômetro')
     plt.xlabel('Número da Amostra')
-    plt.ylabel('Valor Bruto do ADC')
+    # ALTERADO: Atualizada a legenda do eixo Y
+    plt.ylabel('Aceleração (g)')
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -46,7 +47,8 @@ def plot_imu_data(filepath):
     plt.plot(data['numero_amostra'], data['giro_z'], label='Giro Z')
     plt.title('Dados do Giroscópio')
     plt.xlabel('Número da Amostra')
-    plt.ylabel('Valor Bruto do ADC')
+    # ALTERADO: Atualizada a legenda do eixo Y
+    plt.ylabel('Velocidade Angular (dps)')
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -66,4 +68,3 @@ if __name__ == "__main__":
         plot_imu_data(file_path)
     else:
         print("Nenhum arquivo selecionado.")
-

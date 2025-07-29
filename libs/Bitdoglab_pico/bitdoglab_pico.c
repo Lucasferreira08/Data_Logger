@@ -1,5 +1,7 @@
 #include "bitdoglab_pico.h"
 #include "hardware/gpio.h"
+#include "hardware/pwm.h"       // API de PWM para controle de sinais sonoros
+#include "hardware/clocks.h"    // API de clocks do RP2040
 
 void bitdog_init(gpio_irq_callback_t callback) {
     // Inicializa LED RGB
@@ -9,9 +11,17 @@ void bitdog_init(gpio_irq_callback_t callback) {
     bitdog_led_set(LED_COLOR_OFF); // Desliga o LED inicialmente
 
     // Inicializa Buzzer
-    gpio_init(BUZZER_PIN);
-    gpio_set_dir(BUZZER_PIN, GPIO_OUT);
-    gpio_put(BUZZER_PIN, 0);
+    // gpio_init(BUZZER_PIN);
+    // gpio_set_dir(BUZZER_PIN, GPIO_OUT);
+    // gpio_put(BUZZER_PIN, 0);
+
+    // Associa o pino do buzzer à função PWM
+    gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);
+    uint slice_num = pwm_gpio_to_slice_num(BUZZER_PIN);
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_clkdiv(&config, clock_get_hz(clk_sys) / (100 * 4096));
+    pwm_init(slice_num, &config, true);
+    pwm_set_gpio_level(BUZZER_PIN, 0);
 
     // Inicializa Botões com interrupção
     gpio_init(BUTTON_1_PIN);
@@ -49,9 +59,11 @@ void bitdog_led_set(led_color_t color) {
 
 void bitdog_buzzer_beep(uint8_t count, uint16_t duration_ms) {
     for (uint8_t i = 0; i < count; i++) {
-        gpio_put(BUZZER_PIN, 1);
+        // gpio_put(BUZZER_PIN, 1);
+        pwm_set_gpio_level(BUZZER_PIN, 2048);
         sleep_ms(duration_ms);
-        gpio_put(BUZZER_PIN, 0);
+        // gpio_put(BUZZER_PIN, 0);
+        pwm_set_gpio_level(BUZZER_PIN, 0);
         if (i < count - 1) {
             sleep_ms(duration_ms);
         }

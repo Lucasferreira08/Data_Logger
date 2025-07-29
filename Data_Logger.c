@@ -78,8 +78,11 @@ int main() {
     ssd1306_t disp;
     FIL fil;
     uint32_t sample_counter = 0;
-    int16_t accel[3], gyro[3], temp;
     char filename[20];
+
+    // Variáveis para dados brutos e processados
+    int16_t raw_accel[3], raw_gyro[3], raw_temp;
+    float proc_accel[3], proc_gyro[3];
 
     // Configuração inicial dos periféricos
     init_peripherals(&disp);
@@ -105,7 +108,6 @@ int main() {
                 if (button1_pressed) {
                     button1_pressed = false;
                     
-                    // Encontra um nome de arquivo não utilizado (datalog_00.csv, datalog_01.csv, ...)
                     int file_num = 0;
                     FRESULT fr;
                     do {
@@ -113,18 +115,16 @@ int main() {
                         fr = f_stat(filename, NULL);
                     } while (fr == FR_OK && file_num < 100);
 
-                    // Abre o novo arquivo para escrita
                     if (f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
-                        // Escreve o cabeçalho do CSV
+                        // --- ALTERADO: Mantido o cabeçalho original do CSV ---
                         f_printf(&fil, "numero_amostra,accel_x,accel_y,accel_z,giro_x,giro_y,giro_z\n");
                         sample_counter = 0;
-                        bitdog_buzzer_beep(1, 100); // Beep para indicar início
+                        bitdog_buzzer_beep(1, 100);
                         current_state = STATE_RECORDING;
                     } else {
-                        current_state = STATE_ERROR; // Falha ao criar arquivo
+                        current_state = STATE_ERROR;
                     }
                 }
-                // Se o botão 2 for pressionado, inicia o processo de desmontar o SD
                 if (button2_pressed) {
                     button2_pressed = false;
                     current_state = STATE_UNMOUNTING;
@@ -132,20 +132,27 @@ int main() {
                 break;
 
             case STATE_RECORDING:
-                // Pisca o LED azul para indicar acesso ao SD
-                bitdog_led_set(LED_COLOR_BLUE); 
+                // --- ALTERADO: Removida a linha que definia o LED como azul. ---
+                // Agora, a cor do LED é controlada apenas pela função handle_led_feedback.
                 
                 // Lê os dados brutos do MPU6050
-                mpu6050_read_raw(accel, gyro, &temp);
+                mpu6050_read_raw(raw_accel, raw_gyro, &raw_temp);
+
+                // Converte os dados brutos para unidades físicas
+                for (int i = 0; i < 3; i++) {
+                    proc_accel[i] = (float)raw_accel[i] / ACCEL_SENSITIVITY;
+                    proc_gyro[i]  = (float)raw_gyro[i]  / GYRO_SENSITIVITY;
+                }
                 
-                // Escreve a linha de dados no arquivo CSV
-                f_printf(&fil, "%lu,%d,%d,%d,%d,%d,%d\n", sample_counter, accel[0], accel[1], accel[2], gyro[0], gyro[1], gyro[2]);
+                // Escreve a linha de dados processados no arquivo CSV
+                f_printf(&fil, "%lu,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n", 
+                         sample_counter, 
+                         proc_accel[0], proc_accel[1], proc_accel[2], 
+                         proc_gyro[0], proc_gyro[1], proc_gyro[2]);
                 sample_counter++;
                 
-                // Controla a taxa de amostragem (~100Hz)
-                sleep_ms(10); 
+                sleep_ms(10);
                 
-                // Se o botão 1 for pressionado novamente, para a gravação
                 if (button1_pressed) {
                     button1_pressed = false;
                     current_state = STATE_SAVING;
@@ -153,9 +160,8 @@ int main() {
                 break;
 
             case STATE_SAVING:
-                // Ação mais importante: fechar o arquivo para garantir que os dados sejam salvos
                 f_close(&fil);
-                bitdog_buzzer_beep(2, 100); // Dois beeps para indicar que salvou
+                bitdog_buzzer_beep(2, 100);
                 current_state = STATE_IDLE;
                 break;
 
@@ -165,7 +171,6 @@ int main() {
                 break;
 
             case STATE_UNMOUNTED:
-                // Aguarda o botão 2 ser pressionado para tentar montar o cartão novamente
                 if (button2_pressed) {
                     button2_pressed = false;
                     current_state = STATE_MOUNTING;
@@ -173,16 +178,14 @@ int main() {
                 break;
 
             case STATE_MOUNTING:
-                // Tenta montar o cartão SD
                 if (mount_sd_card()) {
-                    current_state = STATE_IDLE; // Sucesso, volta ao estado ocioso
+                    current_state = STATE_IDLE;
                 } else {
-                    current_state = STATE_NO_SD; // Falha, vai para o estado de erro de SD
+                    current_state = STATE_NO_SD;
                 }
                 break;
 
             case STATE_NO_SD:
-                // Neste estado, o usuário pode pressionar o botão 2 para tentar montar novamente
                 if (button2_pressed) {
                     button2_pressed = false;
                     current_state = STATE_MOUNTING;
@@ -190,24 +193,17 @@ int main() {
                 break;
             
             case STATE_ERROR:
-                // Estado de erro fatal. Apenas um reset pode recuperar.
-                // O LED roxo sólido já indica este estado.
                 sleep_ms(1000);
                 break;
         }
     }
-    return 0; // O programa nunca deve chegar aqui
+    return 0;
 }
 
-/**
- * @brief Inicializa todos os periféricos necessários.
- * @param disp Ponteiro para a estrutura do display SSD1306.
- */
-void init_peripherals(ssd1306_t *disp) {
-    // Inicializa periféricos da BitDogLab (LEDs, Buzzer, Botões com callback)
-    bitdog_init(gpio_callback);
+// ... (init_peripherals, gpio_callback, update_display permanecem iguais) ...
 
-    // Inicializa I2C para o Display OLED
+void init_peripherals(ssd1306_t *disp) {
+    bitdog_init(gpio_callback);
     i2c_init(I2C_PORT_DISP, 100 * 1000);
     gpio_set_function(I2C_SDA_DISP, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL_DISP, GPIO_FUNC_I2C);
@@ -215,24 +211,13 @@ void init_peripherals(ssd1306_t *disp) {
     gpio_pull_up(I2C_SCL_DISP);
     ssd1306_init(disp, 128, 64, false, DISP_ADDR, I2C_PORT_DISP);
     ssd1306_config(disp);
-
-    // Inicializa I2C para o MPU6050 e reseta o sensor
     mpu6050_init(I2C_PORT_MPU, I2C_SDA_MPU, I2C_SCL_MPU);
     mpu6050_reset();
 }
 
-/**
- * @brief Função de callback para interrupção de GPIO.
- * * Chamada quando qualquer um dos botões é pressionado.
- * Inclui uma lógica de debounce para evitar múltiplas detecções.
- * @param gpio O pino que gerou a interrupção.
- * @param events O tipo de evento (borda de subida/descida).
- */
 void gpio_callback(uint gpio, uint32_t events) {
     static uint64_t last_press_time = 0;
     uint64_t now = time_us_64();
-
-    // Lógica de Debounce: ignora pressões muito rápidas (intervalo de 200ms)
     if (now - last_press_time > 200 * 1000) {
         last_press_time = now;
         if (gpio == BUTTON_1_PIN) {
@@ -243,16 +228,9 @@ void gpio_callback(uint gpio, uint32_t events) {
     }
 }
 
-/**
- * @brief Atualiza o conteúdo do display OLED.
- * @param p Ponteiro para a estrutura do display.
- * @param state O estado atual do sistema.
- * @param sample_count O número de amostras coletadas (relevante no estado de gravação).
- */
 void update_display(ssd1306_t *p, system_state_t state, uint32_t sample_count) {
     char line1[20], line2[20];
-    ssd1306_fill(p, false); // Limpa o buffer do display
-
+    ssd1306_fill(p, false);
     switch (state) {
         case STATE_INITIALIZING:
         case STATE_MOUNTING:
@@ -288,12 +266,11 @@ void update_display(ssd1306_t *p, system_state_t state, uint32_t sample_count) {
             strcpy(line2, "Reinicie o Pico");
             break;
     }
-
-    // Desenha as strings no buffer e envia para o display
     ssd1306_draw_string(p, line1, 0, 10);
     ssd1306_draw_string(p, line2, 0, 30);
     ssd1306_send_data(p);
 }
+
 
 /**
  * @brief Controla o LED RGB com base no estado do sistema.
@@ -310,16 +287,15 @@ void handle_led_feedback(system_state_t state) {
             bitdog_led_set(LED_COLOR_YELLOW);
             break;
         case STATE_IDLE:
-        case STATE_SAVING: // Verde também ao salvar para indicar que logo estará pronto
+        case STATE_SAVING: 
             bitdog_led_set(LED_COLOR_GREEN);
             break;
         case STATE_RECORDING:
-            // O LED principal é vermelho, mas pisca azul ao gravar
+            // --- ALTERADO: Cor do LED definida como vermelho durante a gravação. ---
             bitdog_led_set(LED_COLOR_RED);
             break;
         case STATE_NO_SD:
         case STATE_UNMOUNTED:
-            // Pisca o LED roxo a cada 500ms
             if (now - last_blink_time > 500 * 1000) {
                 last_blink_time = now;
                 purple_led_on = !purple_led_on;
@@ -327,7 +303,7 @@ void handle_led_feedback(system_state_t state) {
             }
             break;
         case STATE_ERROR:
-            bitdog_led_set(LED_COLOR_PURPLE); // Roxo sólido para erro fatal
+            bitdog_led_set(LED_COLOR_PURPLE);
             break;
         default:
             bitdog_led_set(LED_COLOR_OFF);

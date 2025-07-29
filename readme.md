@@ -1,0 +1,1 @@
+O projeto é um datalogger de movimento portátil e autônomo. Seu principal objetivo é capturar dados de um sensor de movimento inercial (IMU MPU6050), especificamente de seu acelerómetro e giroscópio, e armazenar essas informações de forma estruturada em um cartão MicroSD.
